@@ -1,8 +1,12 @@
 from datasets import load_dataset
 
 
-emotions = load_dataset(path="data/emotion_classification")
-print(emotions["train"][0])
+
+
+def get_dataset():
+    # dataset = load_dataset(path="data/emotion_classification")
+    dataset = load_dataset("hieunguyenminh/roleplay", split="train[0:1000]")
+    return dataset
 
 
 
