@@ -27,7 +27,7 @@ logger.info("使用的设备是：%s", device)
 def test_env(config):
     pipe = pipeline(
         "text-generation",
-        model=config.get("config", "offline_model"),
+        model=config.get("base", "offline_model"),
         device_map="auto",
         trust_remote_code=True,
     )
