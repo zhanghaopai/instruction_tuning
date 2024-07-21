@@ -24,7 +24,7 @@ if torch.cuda.is_available():
 logger.info("使用的设备是：%s", device)
 
 
-def main(config):
+def test_env(config):
     pipe = pipeline(
         "text-generation",
         model=config.get("config", "offline_model"),
@@ -47,4 +47,4 @@ def main(config):
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("config/config.ini")
-    main(config)
+    test_env(config)
