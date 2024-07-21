@@ -1,38 +1,76 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import configparser
+
+import os
+
 import torch
+from trl import SFTTrainer, SFTConfig
 
-model_id = "NousResearch/Llama-2-7b-chat-hf"
+from data import get_dataset
+from load import load, load_fine_tuning_model
+from utils.logger import get_logger
 
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-)
 
-messages = [
-    {"role": "system", "content": "You are a pirate chatbot who always responds in pirate speak!"},
-    {"role": "user", "content": "Who are you?"},
-]
+config = configparser.ConfigParser()
+config.read("config/config.ini")
+logger=get_logger(config)
 
-input_ids = tokenizer.apply_chat_template(
-    messages,
-    add_generation_prompt=True,
-    return_tensors="pt"
-).to(model.device)
 
-terminators = [
-    tokenizer.eos_token_id,
-    tokenizer.convert_tokens_to_ids("<|eot_id|>")
-]
 
-outputs = model.generate(
-    input_ids,
-    max_new_tokens=256,
-    eos_token_id=terminators,
-    do_sample=True,
-    temperature=0.6,
-    top_p=0.9,
-)
-response = outputs[0][input_ids.shape[-1]:]
-print(tokenizer.decode(response, skip_special_tokens=True))
+'''
+CUDA报OOM错误
+'''
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+'''
+使用CUDA
+'''
+device = "cpu"
+# if torch.cuda.is_available():
+#     device = "cuda:0"
+#     torch.cuda.set_device(0)
+# logger.info("使用的设备是：%s", device)
+
+
+
+def main(config):
+    # 加载模型和tokenizer
+    dataset = get_dataset()
+    model, tokenizer = load(config)
+    model, peft_config = load_fine_tuning_model(model, config)
+    train(model, tokenizer, dataset, peft_config, config)
+
+
+def train(model, tokenizer, dataset, peft_config, config):
+    training_arguments = SFTConfig(
+        dataset_text_field="text",
+        packing=False,
+        max_seq_length=2048,
+        output_dir="./output/phi-2-fine-tuning",
+        num_train_epochs=1,
+        gradient_accumulation_steps=1,
+        optim="sgd",
+        save_strategy="epoch",
+        logging_steps=100,
+        logging_strategy="steps",
+        learning_rate=2e-4,
+        fp16=False,
+        bf16=False,
+        group_by_length=True,
+        disable_tqdm=False,
+        report_to="none",
+    )
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=dataset,
+        args=training_arguments,
+        tokenizer=tokenizer,
+    )
+
+    trainer.train()
+
+
+def eval():
+    pass
+
+
+if __name__ == "__main__":
+    main(config)
