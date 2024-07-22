@@ -46,6 +46,39 @@ def converter(origin_path, instruction_path):
     pd.DataFrame(test_set).to_csv(os.path.join(instruction_path, "test.csv"), mode='w', index=False)
 
 
+# 将样本转换为ChatML格式
+templates = {
+    "system": "<|im_start|>system\n{msg}<|im_end|>",
+    "user": "<|im_start|>user\n{msg}<|im_end|>",
+    "assistant": "<|im_start|>assistant\n{msg}<|im_end|>",
+}
+
+
+def tokenize(sample, tokenizer, maxlen):
+    input_ids, attention_mask, labels = [], [], []
+    instruction_tokenized = tokenizer(
+        templates["system"].format(msg=sample["instruction"]) + "\n" +
+        templates["user"].format(msg=sample["input"]),
+        truncation=False,
+        add_special_tokens=False
+    )
+    response = tokenizer(f"{sample['output']}", add_special_tokens=False)
+    input_ids = (
+            instruction_tokenized["input_ids"] + response["input_ids"] + [tokenizer.pad_token_id]
+    )
+    attention_mask = instruction_tokenized["attention_mask"] + response["attention_mask"] + [1]
+    labels = (
+            [-100] * len(instruction_tokenized["input_ids"])  # 忽略user消息，忽略长度为100
+            + response["input_ids"]
+            + [tokenizer.pad_token_id]
+    )
+    return {
+        "input_ids": input_ids[:maxlen],
+        "attention_mask": attention_mask[:maxlen],
+        "labels": labels[:maxlen]
+    }
+
+
 if __name__ == '__main__':
     root_path = "../"
     get_sa_dataset(root_path)
