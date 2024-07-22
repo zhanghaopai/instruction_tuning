@@ -1,10 +1,12 @@
 import configparser
 import os
+from functools import partial
 
 import swanlab
 from trl import SFTTrainer, SFTConfig
 
-from data import get_dataset
+from dataloader import sa_dataloader
+from dataloader.sa_dataloader import get_sa_dataset
 from load import load_model, load_lora_model, load_tokenizer
 from monitor.monitor import load_monitor
 from utils.logger import get_logger
@@ -20,13 +22,25 @@ os.environ["BNB_CUDA_VERSION"] = "121"
 
 
 def main(config):
-    # 加载模型和tokenizer
-    dataset = get_dataset()
+    # 加载tokenizer
     tokenizer = load_tokenizer(config)
+    # 加载数据集
+    dataset = get_sa_dataset(os.curdir)
+    train_dataset = dataset["train"]
+    train_dataset_tokenized = train_dataset.map(
+        partial(sa_dataloader.tokenize, maxlen=1024, tokenizer=tokenizer),
+        batched=False,
+        remove_columns=train_dataset.column_names  # 删除原始列
+    )
+    logger.debug("tokenized:%s", train_dataset_tokenized[0])
+    # 加载模型
     model = load_model(config)
     model = load_lora_model(model, config)
+    # 训练
     callback_func = load_monitor(config)
-    train(model, tokenizer, dataset, callback_func)
+    train(model, tokenizer, train_dataset_tokenized, callback_func)
+    # eval
+    eval()
 
 
 def train(model, tokenizer, dataset, callback_func):
@@ -61,6 +75,10 @@ def train(model, tokenizer, dataset, callback_func):
 
 
 def eval():
+    '''
+    测试模型
+    :return:
+    '''
     pass
 
 
