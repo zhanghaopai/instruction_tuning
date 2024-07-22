@@ -1,4 +1,3 @@
-import configparser
 import os
 
 import pandas as pd
@@ -43,8 +42,8 @@ def converter(origin_path, instruction_path):
             }
             converted.append(message)
     train_set, test_set = train_test_split(converted, test_size=0.2, random_state=7)
-    pd.DataFrame(train_set).to_csv(os.path.join(instruction_path, "train.csv"), mode='w')
-    pd.DataFrame(test_set).to_csv(os.path.join(instruction_path, "test.csv"), mode='w')
+    pd.DataFrame(train_set).to_csv(os.path.join(instruction_path, "train.csv"), mode='w', index=False)
+    pd.DataFrame(test_set).to_csv(os.path.join(instruction_path, "test.csv"), mode='w', index=False)
 
 
 if __name__ == '__main__':
