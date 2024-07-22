@@ -42,4 +42,4 @@ def load_lora_model(model, config):
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=False)
     model = get_peft_model(model, peft_config)
     model.config.use_cache = False
-    return model, peft_config
+    return model
