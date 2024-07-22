@@ -1,55 +1,44 @@
 import configparser
-
 import os
 
-import torch
 from trl import SFTTrainer, SFTConfig
 
 from data import get_dataset
-from load import load, load_fine_tuning_model
+from load import load_model, load_lora_model, load_tokenizer
 from utils.logger import get_logger
-
 
 config = configparser.ConfigParser()
 config.read("config/config.ini")
-logger=get_logger(config)
-
-
+logger = get_logger(config)
 
 '''
-CUDA报OOM错误
+设置环境
 '''
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-'''
-使用CUDA
-'''
-device = "cpu"
-# if torch.cuda.is_available():
-#     device = "cuda:0"
-#     torch.cuda.set_device(0)
-# logger.info("使用的设备是：%s", device)
-
+# os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["BNB_CUDA_VERSION"] = "121"
 
 
 def main(config):
     # 加载模型和tokenizer
     dataset = get_dataset()
-    model, tokenizer = load(config)
-    model, peft_config = load_fine_tuning_model(model, config)
-    train(model, tokenizer, dataset, peft_config, config)
+    tokenizer = load_tokenizer(config)
+    model = load_model(config)
+    model = load_lora_model(model, config)
+    train(model, tokenizer, dataset)
 
 
-def train(model, tokenizer, dataset, peft_config, config):
+def train(model, tokenizer, dataset):
     training_arguments = SFTConfig(
         dataset_text_field="text",
         packing=False,
-        max_seq_length=2048,
+        max_seq_length=1024,
         output_dir="./output/phi-2-fine-tuning",
         num_train_epochs=1,
+        per_device_train_batch_size=1,
         gradient_accumulation_steps=1,
-        optim="sgd",
+        optim="paged_adamw_8bit",  # 分页实现内存管理，否则可能出现oom
         save_strategy="epoch",
-        logging_steps=100,
+        logging_steps=1,
         logging_strategy="steps",
         learning_rate=2e-4,
         fp16=False,
