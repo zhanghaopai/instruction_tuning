@@ -1,10 +1,12 @@
 import configparser
 import os
 
+import swanlab
 from trl import SFTTrainer, SFTConfig
 
 from data import get_dataset
 from load import load_model, load_lora_model, load_tokenizer
+from monitor.monitor import load_monitor
 from utils.logger import get_logger
 
 config = configparser.ConfigParser()
@@ -14,7 +16,6 @@ logger = get_logger(config)
 '''
 设置环境
 '''
-# os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 os.environ["BNB_CUDA_VERSION"] = "121"
 
 
@@ -24,10 +25,11 @@ def main(config):
     tokenizer = load_tokenizer(config)
     model = load_model(config)
     model = load_lora_model(model, config)
-    train(model, tokenizer, dataset)
+    callback_func = load_monitor(config)
+    train(model, tokenizer, dataset, callback_func)
 
 
-def train(model, tokenizer, dataset):
+def train(model, tokenizer, dataset, callback_func):
     training_arguments = SFTConfig(
         dataset_text_field="text",
         packing=False,
@@ -35,7 +37,7 @@ def train(model, tokenizer, dataset):
         output_dir="./output/phi-2-fine-tuning",
         num_train_epochs=1,
         per_device_train_batch_size=1,
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=16,
         optim="paged_adamw_8bit",  # 分页实现内存管理，否则可能出现oom
         save_strategy="epoch",
         logging_steps=1,
@@ -52,9 +54,10 @@ def train(model, tokenizer, dataset):
         train_dataset=dataset,
         args=training_arguments,
         tokenizer=tokenizer,
+        callbacks=[callback_func]
     )
-
     trainer.train()
+    swanlab.finish()
 
 
 def eval():
