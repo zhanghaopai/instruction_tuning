@@ -9,12 +9,12 @@ id2emotion_dict = {"0": "sadness", "1": "joy", "2": "love", "3": "anger", "4": "
 emotion2id_dict = {"sadness": "0", "joy": "1", "love": "2", "anger": "3", "fear": "4", "surprise": "5"}
 
 
-def get_dataset(config):
+def get_sa_dataset(root_path):
     origin_ds_path = os.path.join(
-        config.root_path, "assets", "sa", "origin"
+        root_path, "assets", "sa", "origin"
     )
     instruction_ds_path = os.path.join(
-        config.root_path, "assets", "sa", "instruction"
+        root_path, "assets", "sa", "instruction"
     )
     # 如果没有做指令转换，则做指令转换
     if len(os.listdir(instruction_ds_path)) == 0:
@@ -48,6 +48,5 @@ def converter(origin_path, instruction_path):
 
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    config.root_path = "../"
-    get_dataset(config)
+    root_path = "../"
+    get_sa_dataset(root_path)
