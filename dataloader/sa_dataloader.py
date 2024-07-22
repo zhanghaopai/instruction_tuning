@@ -37,7 +37,7 @@ def converter(origin_path, instruction_path):
                                "You will receive a piece of text and a list of candidate options, " +
                                "and you are asked to select the sentiment " +
                                "that matches the emotional tendency of the text from the candidates.",
-                "input": f"text:{text}, options:{emotion2id_dict.keys()}",
+                "input": f"text:{text}, options:{list(emotion2id_dict.keys())}",
                 "output": id2emotion_dict[str(label)]
             }
             converted.append(message)
