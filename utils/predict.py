@@ -1,7 +1,7 @@
 def predict(messages, model, tokenizer):
     device = "cuda"
     text = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=False
     )
     model_inputs = tokenizer([text], return_tensors="pt").to(device)
 
