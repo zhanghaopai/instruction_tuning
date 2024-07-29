@@ -7,9 +7,10 @@ from trl import SFTTrainer, SFTConfig
 
 from dataloader import sa_dataloader
 from dataloader.sa_dataloader import get_sa_dataset
-from load import load_model, load_lora_model, load_tokenizer
+from load import load_model, load_tokenizer, load_lora_model
 from monitor.monitor import load_monitor
 from utils.logger import get_logger
+from utils.predict import predict
 
 config = configparser.ConfigParser()
 config.read("config/config.ini")
@@ -37,10 +38,10 @@ def main(config):
     model = load_model(config)
     model = load_lora_model(model, config)
     # 训练
-    callback_func = load_monitor(config)
+    callback_func = load_monitor()
     train(model, tokenizer, train_dataset_tokenized, callback_func)
     # eval
-    eval()
+    eval(dataset["test"], model, tokenizer)
 
 
 def train(model, tokenizer, dataset, callback_func):
@@ -62,6 +63,7 @@ def train(model, tokenizer, dataset, callback_func):
         group_by_length=True,
         disable_tqdm=False,
         report_to="none",
+        dataset_batch_size=100,
     )
     trainer = SFTTrainer(
         model=model,
@@ -74,12 +76,25 @@ def train(model, tokenizer, dataset, callback_func):
     swanlab.finish()
 
 
-def eval():
+def eval(test_dataset, model, tokenizer):
     '''
     测试模型
     :return:
     '''
-    pass
+    test_samples = test_dataset[:10]
+    test_result = []
+    for i in range(len(test_samples["output"])):
+        instruction = test_samples["instruction"][i]
+        input = test_samples["input"][i]
+
+        messages = [
+            {"role": "system", "content": f"{instruction}"},
+            {"role": "user", "content": f"{input}"},
+        ]
+        response = predict(messages, model, tokenizer)
+        messages.append({"role": "assistant", "content": f"{response}"})
+        result_text = f"{messages[0]}\n\n{messages[1]}\n\n{messages[2]}"
+        test_result.append(swanlab.Text(result_text, caption=response))
 
 
 if __name__ == "__main__":
